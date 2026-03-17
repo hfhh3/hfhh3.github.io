@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前置舆情获取 - 完整原型</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+        body { background: #f5f7fb; display: flex; justify-content: center; padding: 30px 20px; }
+        .app { max-width: 1400px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); overflow: hidden; }
+        .page { padding: 28px; display: none; }
+        .page.active { display: block; }
+        .btn-primary { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+        .btn-primary:disabled { background: #cbd5e1; cursor: not-allowed; opacity: 0.6; }
+        .btn-secondary { background: white; border: 1px solid #e2e8f0; color: #334155; padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn-text { color: #2563eb; background: none; border: none; font-weight: 500; font-size: 14px; cursor: pointer; padding: 4px 8px; border-radius: 20px; }
+        .btn-text:hover { background: #eef2ff; }
+        .card { background: white; border-radius: 24px; border: 1px solid #f0f4f9; box-shadow: 0 8px 20px -8px rgba(0,34,64,0.08); overflow: hidden; margin-bottom: 24px; }
+        .card-header { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #0f182a; display: flex; align-items: center; justify-content: space-between; }
+        .card-body { padding: 20px 24px 24px; }
+        .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+        .filter-select, .search-input { padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 40px; background: white; font-size: 14px; color: #1e293b; outline: none; }
+        .search-input { flex: 1; min-width: 200px; padding-left: 40px; }
+        .filter-select { min-width: 120px; }
+        .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .table th { text-align: left; padding: 14px 8px 8px 8px; color: #64748b; font-weight: 500; border-bottom: 1px solid #eef2f6; }
+        .table td { padding: 14px 8px; border-bottom: 1px solid #f6f9fc; color: #1e293b; }
+        .badge { background: #eef2ff; color: #2563eb; padding: 4px 12px; border-radius: 30px; font-size: 12px; font-weight: 500; display: inline-block; }
+        .badge-success { background: #e3f7e7; color: #0e7342; }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-neutral { background: #f1f5f9; color: #475569; }
+        .platform-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .platform-tag { padding: 8px 16px; border: 1px solid #d0d9e8; border-radius: 40px; background: white; font-size: 14px; font-weight: 500; color: #1e293b; cursor: pointer; transition: 0.15s; }
+        .platform-tag.selected { background: #2563eb; border-color: #2563eb; color: white; }
+        .keyword-section { margin: 20px 0; padding: 20px; border-radius: 20px; background: #f8fafc; }
+        .keyword-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
+        .keyword-input { flex: 1; padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 14px; }
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid #edf2f7; margin-bottom: 24px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; font-size: 14px; font-weight: 500; color: #5e6f8d; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .inner-tabs { display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 8px; flex-wrap: wrap; align-items: center; }
+        .inner-tab { padding: 6px 16px; border-radius: 30px; background: white; border: 1px solid #e2e8f0; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .inner-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .weight-row { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; margin: 20px 0; }
+        .weight-item { display: flex; align-items: center; gap: 8px; }
+        .weight-input { width: 80px; padding: 8px 12px; border: 1px solid #dbe0e8; border-radius: 20px; font-size: 14px; text-align: center; }
+        .stat-cards { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-card { background: #f9fbfe; border-radius: 20px; padding: 16px 20px; flex: 1 1 150px; border: 1px solid #edf2f7; cursor: pointer; transition: 0.15s; }
+        .stat-card:hover { background: #eef2ff; }
+        .stat-label { font-size: 13px; color: #5e6f8d; margin-bottom: 4px; }
+        .stat-number { font-size: 22px; font-weight: 700; color: #0f182a; }
+        .histogram { margin: 20px 0; }
+        .histogram-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .histogram-label { width: 80px; font-size: 13px; color: #5e6f8d; }
+        .histogram-bar { flex: 1; height: 24px; background: #e2e8f0; border-radius: 30px; overflow: hidden; }
+        .histogram-fill { height: 100%; background: #2563eb; width: 0%; border-radius: 30px; }
+        .histogram-value { width: 50px; font-size: 13px; color: #1e293b; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: #5e6f8d; font-size: 14px; margin-bottom: 20px; cursor: pointer; }
+        .empty-state { text-align: center; padding: 60px; color: #94a3b8; background: #f9fbfe; border-radius: 24px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; border-radius: 24px; padding: 24px; width: 400px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); }
+        .modal h4 { margin-bottom: 16px; }
+        .modal-actions { display: flex; gap: 12px; margin: 20px 0; justify-content: center; }
+        .modal-btn { padding: 8px 20px; border-radius: 40px; border: 1px solid #d0d9e8; background: white; cursor: pointer; }
+        .modal-btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+        .footer-btns { display: flex; gap: 12px; justify-content: flex-end; }
+        .filter-label { font-size: 13px; color: #5e6f8d; margin-right: 4px; }
+        .info-note { background: #f1f5f9; border-radius: 30px; padding: 8px 16px; font-size: 13px; color: #475569; margin-bottom: 16px; display: inline-block; }
+        .sub-tabs { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+        .sub-tab { padding: 6px 16px; border-radius: 30px; background: white; border: 1px solid #e2e8f0; font-size: 13px; cursor: pointer; }
+        .sub-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .group-header { background: #f1f5f9; padding: 8px 16px; border-radius: 30px; margin: 20px 0 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .group-header i { transition: transform 0.2s; }
+        .group-header.collapsed i { transform: rotate(-90deg); }
+        .group-content { transition: all 0.2s; }
+        .group-content.collapsed { display: none; }
+        .search-wrapper { position: relative; flex: 1; min-width: 200px; }
+        .search-wrapper i { position: absolute; left: 16px; top: 10px; color: #94a3b8; font-size: 14px; }
+        .search-wrapper .search-input { width: 100%; padding-left: 40px; }
+        .link-icon { color: #2563eb; cursor: pointer; }
+        .link-icon:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- 批量复核模态框 -->
+    <div class="modal-overlay" id="batchModal">
+        <div class="modal">
+            <h4><i class="fas fa-check-circle"></i> 批量复核</h4>
+            <p>请选择操作：</p>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="batchAction('相关')">相关</button>
+                <button class="modal-btn" onclick="batchAction('非相关')">非相关</button>
+                <button class="modal-btn" onclick="batchAction('重置')">重置</button>
+            </div>
+            <div class="footer-btns">
+                <button class="btn-secondary" onclick="closeBatchModal()">返回</button>
+                <button class="btn-primary" onclick="confirmBatch()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页面1：项目列表页 -->
+    <div id="page-list" class="page active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2>舆情项目</h2>
+            <button class="btn-primary" id="newProjectBtn"><i class="fas fa-plus"></i> 新建项目</button>
+        </div>
+        <div class="filter-bar">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="search-input" placeholder="项目名称搜索">
+            </div>
+            <select class="filter-select">
+                <option>全部平台</option>
+                <option>B站</option>
+                <option>抖音</option>
+                <option>小红书</option>
+            </select>
+            <select class="filter-select" id="statusFilter">
+                <option>全部状态</option>
+                <option>未执行</option>
+                <option>执行中</option>
+                <option>已完成</option>
+            </select>
+            <select class="filter-select">
+                <option>采集时间</option>
+                <option>近7天</option>
+                <option>近30天</option>
+            </select>
+        </div>
+        <div class="card"><div class="card-body" style="padding:0;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>项目名称</th>
+                        <th>关联平台</th>
+                        <th>词条数</th>
+                        <th>状态</th>
+                        <th>最后采集</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>金铲铲·福星版本</td>
+                        <td>
+                            <span class="badge">B站</span>
+                            <span class="badge">抖音</span>
+                            <span class="badge">小红书</span>
+                        </td>
+                        <td>6</td>
+                        <td><span class="badge badge-success">已完成</span></td>
+                        <td>2026-03-11</td>
+                        <td><button class="btn-text" onclick="showDetail('金铲铲·福星版本', '已完成')">详情</button></td>
+                    </tr>
+                    <tr>
+                        <td>王者荣耀·新赛季</td>
+                        <td>
+                            <span class="badge">B站</span>
+                            <span class="badge">NGA</span>
+                        </td>
+                        <td>4</td>
+                        <td><span class="badge badge-warning">执行中</span></td>
+                        <td>2026-03-10</td>
+                        <td><button class="btn-text" onclick="showDetail('王者荣耀·新赛季', '执行中')">详情</button></td>
+                    </tr>
+                    <tr>
+                        <td>原神·4.5版本</td>
+                        <td>
+                            <span class="badge">B站</span>
+                            <span class="badge">微博</span>
+                        </td>
+                        <td>3</td>
+                        <td><span class="badge badge-neutral">未执行</span></td>
+                        <td>-</td>
+                        <td><button class="btn-text" onclick="showDetail('原神·4.5版本', '未执行')">详情</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+
+    <!-- 页面2：项目详情页 -->
+    <div id="page-detail" class="page">
+        <div class="back-link" onclick="showList()"><i class="fas fa-arrow-left"></i> 返回列表</div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+            <h2 id="detailProjectName">金铲铲·福星版本</h2>
+            <span class="badge" id="detailProjectStatus">已完成</span>
+        </div>
+
+        <div class="tabs" id="detailTabs">
+            <span class="tab active" data-tab="config">项目配置</span>
+            <span class="tab" data-tab="platform">平台热度</span>
+            <span class="tab" data-tab="post">稿件热度</span>
+            <span class="tab" data-tab="comment">评论列表</span>
+            <span class="tab" data-tab="hotcomment">高热评论列表</span>
+        </div>
+
+        <!-- 项目配置 -->
+        <div id="tab-config" class="tab-content active">
+            <div class="card"><div class="card-body">
+                <h4 style="margin-bottom:16px;"><i class="fas fa-download" style="margin-right:8px; color:#2563eb;"></i>抓取配置</h4>
+                <div style="margin-bottom:20px;">
+                    <label style="font-weight:500; display:block; margin-bottom:8px;">时间范围</label>
+                    <select class="filter-select" style="width:200px;">
+                        <option>近7天</option>
+                        <option>近30天</option>
+                        <option>自定义</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom:16px;">
+                    <div style="font-weight:500; margin-bottom:12px;">评论平台</div>
+                    <div class="platform-tags" id="commentPlatforms">
+                        <span class="platform-tag selected" data-platform="bilibili">B站</span>
+                        <span class="platform-tag selected" data-platform="douyin">抖音</span>
+                        <span class="platform-tag selected" data-platform="xiaohongshu">小红书</span>
+                        <span class="platform-tag" data-platform="weibo">微博</span>
+                        <span class="platform-tag" data-platform="nga">NGA</span>
+                        <span class="platform-tag" data-platform="tieba">贴吧</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div style="font-weight:500; margin-bottom:12px;">评价平台</div>
+                    <div class="platform-tags">
+                        <span class="platform-tag" data-platform="appstore">App Store</span>
+                        <span class="platform-tag" data-platform="taptap">TapTap</span>
+                    </div>
+                </div>
+
+                <!-- B站词条 -->
+                <div class="keyword-section" data-platform="bilibili">
+                    <div style="font-weight:500; margin-bottom:8px;">B站 - 搜索词条</div>
+                    <div class="keyword-row">
+                        <input class="keyword-input" value="金铲铲 福星">
+                        <button class="btn-secondary"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="keyword-row">
+                        <input class="keyword-input" value="金铲铲 评测">
+                        <button class="btn-secondary"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <button class="btn-secondary" style="margin-top:8px;"><i class="fas fa-plus"></i> 新增词条</button>
+                    <div style="font-size:12px; color:#94a3b8; margin-top:8px;">已输入 2/100 条</div>
+                </div>
+
+                <!-- 抖音词条 -->
+                <div class="keyword-section" data-platform="douyin">
+                    <div style="font-weight:500; margin-bottom:8px;">抖音 - 搜索词条</div>
+                    <div class="keyword-row">
+                        <input class="keyword-input" value="金铲铲 福星">
+                        <button class="btn-secondary"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <button class="btn-secondary" style="margin-top:8px;"><i class="fas fa-plus"></i> 新增词条</button>
+                </div>
+
+                <div style="display:flex; gap:16px; justify-content:flex-end; margin-top:30px;">
+                    <button class="btn-secondary"><i class="fas fa-save"></i> 保存</button>
+                    <button class="btn-primary" id="executeBtn" onclick="confirmExecute()">
+                        <i class="fas fa-play"></i> 
+                        <span id="executeBtnText">开始采集</span>
+                    </button>
+                </div>
+            </div></div>
+        </div>
+
+        <!-- 平台热度 -->
+        <div id="tab-platform" class="tab-content">
+            <div id="platformEmpty" class="empty-state" style="display:none;">暂无数据，请先完成数据采集</div>
+            <div id="platformContent" style="display:none;">
+                <div class="inner-tabs" id="platformDetailTabs">
+                    <span class="inner-tab active" data-platform-detail="bilibili">B站</span>
+                    <span class="inner-tab" data-platform-detail="douyin">抖音</span>
+                    <span class="inner-tab" data-platform-detail="xiaohongshu">小红书</span>
+                </div>
+                
+                <div class="stat-cards">
+                    <div class="stat-card"><div class="stat-label">总稿件</div><div class="stat-number">112</div></div>
+                    <div class="stat-card"><div class="stat-label">评论数最小值</div><div class="stat-number">23</div></div>
+                    <div class="stat-card"><div class="stat-label">评论数最大值</div><div class="stat-number">1,245</div></div>
+                    <div class="stat-card"><div class="stat-label">评论数中位数</div><div class="stat-number">187</div></div>
+                    <div class="stat-card"><div class="stat-label">评论数平均值</div><div class="stat-number">256</div></div>
+                </div>
+
+                <div class="histogram">
+                    <div class="histogram-row">
+                        <span class="histogram-label">0-200</span>
+                        <div class="histogram-bar"><div class="histogram-fill" style="width:45%"></div></div>
+                        <span class="histogram-value">45</span>
+                    </div>
+                    <div class="histogram-row">
+                        <span class="histogram-label">200-400</span>
+                        <div class="histogram-bar"><div class="histogram-fill" style="width:30%"></div></div>
+                        <span class="histogram-value">30</span>
+                    </div>
+                    <div class="histogram-row">
+                        <span class="histogram-label">400-600</span>
+                        <div class="histogram-bar"><div class="histogram-fill" style="width:15%"></div></div>
+                        <span class="histogram-value">15</span>
+                    </div>
+                    <div class="histogram-row">
+                        <span class="histogram-label">600+</span>
+                        <div class="histogram-bar"><div class="histogram-fill" style="width:10%"></div></div>
+                        <span class="histogram-value">10</span>
+                    </div>
+                </div>
+
+                <!-- 平台综合热度规则 -->
+                <div style="margin:24px 0; padding:16px; background:#f9fbfe; border-radius:20px;">
+                    <h4 style="margin-bottom:12px;">平台综合热度规则</h4>
+                    <div class="weight-row">
+                        <div class="weight-item">
+                            <span>稿件数量权重</span>
+                            <input class="weight-input" value="0.40" step="0.01" min="0" max="1" type="number">
+                        </div>
+                        <div class="weight-item">
+                            <span>平均评论数权重</span>
+                            <input class="weight-input" value="0.60" step="0.01" min="0" max="1" type="number">
+                        </div>
+                        <span style="color:#0e7342;">总和: 1.00</span>
+                    </div>
+                </div>
+
+                <!-- 高热平台筛选规则 -->
+                <div style="margin:24px 0; padding:16px; background:#f9fbfe; border-radius:20px;">
+                    <h4 style="margin-bottom:12px;">高热平台筛选规则</h4>
+                    <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <select class="filter-select" style="width:110px;">
+                                <option>排名前N</option>
+                                <option>热度≥N</option>
+                            </select>
+                            <input class="weight-input" value="3" style="width:80px;" placeholder="N" type="number">
+                        </div>
+                        <button class="btn-secondary"><i class="fas fa-calculator"></i> 重新计算</button>
+                    </div>
+                </div>
+
+                <h4 style="margin-bottom:12px;">平台综合热度</h4>
+                <div class="card"><div class="card-body" style="padding:0;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>平台</th>
+                                <th>稿件数量</th>
+                                <th>平均评论数</th>
+                                <th>综合热度</th>
+                                <th>高热平台</th>
+                                <th>复核</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>B站</td>
+                                <td>112</td>
+                                <td>256</td>
+                                <td>198.4</td>
+                                <td><span class="badge badge-success">高热</span></td>
+                                <td><span class="badge badge-warning">复核中</span></td>
+                                <td><button class="btn-text" onclick="switchToPostTab('B站')">查看稿件</button></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>抖音</td>
+                                <td>67</td>
+                                <td>178</td>
+                                <td>124.6</td>
+                                <td><span class="badge badge-success">高热</span></td>
+                                <td><span class="badge badge-neutral">待复核</span></td>
+                                <td><button class="btn-text" onclick="switchToPostTab('抖音')">查看稿件</button></td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>小红书</td>
+                                <td>43</td>
+                                <td>92</td>
+                                <td>65.8</td>
+                                <td><span class="badge badge-success">高热</span></td>
+                                <td><span class="badge badge-success">已复核</span></td>
+                                <td><button class="btn-text" onclick="switchToPostTab('小红书')">查看稿件</button></td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>微博</td>
+                                <td>45</td>
+                                <td>23</td>
+                                <td>34.0</td>
+                                <td><span class="badge badge-neutral">非高热</span></td>
+                                <td><span class="badge badge-neutral">-</span></td>
+                                <td><button class="btn-text" onclick="switchToPostTab('微博')">查看稿件</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+
+        <!-- 稿件热度 -->
+        <div id="tab-post" class="tab-content">
+            <div id="postEmpty" class="empty-state" style="display:none;">暂无数据，请先完成数据采集</div>
+            <div id="postContent" style="display:none;">
+                <div style="display:flex; gap:12px; margin-bottom:20px;">
+                    <select class="filter-select" id="platformTypeFilter">
+                        <option>全部平台</option>
+                        <option>高热平台</option>
+                        <option>非高热平台</option>
+                    </select>
+                </div>
+                
+                <div class="inner-tabs" id="postPlatformTabs">
+                    <span class="inner-tab active" data-post-platform="bilibili">B站</span>
+                    <span class="inner-tab" data-post-platform="douyin">抖音</span>
+                    <span class="inner-tab" data-post-platform="xiaohongshu">小红书</span>
+                </div>
+
+                <!-- B站平台内容 -->
+                <div class="post-platform-content active" data-post="bilibili">
+                    <div class="stat-cards" id="postDashboard">
+                        <div class="stat-card" onclick="filterPostList('total')">
+                            <div class="stat-label">总稿件</div>
+                            <div class="stat-number">112</div>
+                        </div>
+                        <div class="stat-card" onclick="filterPostList('high')">
+                            <div class="stat-label">高热稿件</div>
+                            <div class="stat-number">23</div>
+                        </div>
+                        <div class="stat-card" onclick="filterPostList('pending')">
+                            <div class="stat-label">待复核</div>
+                            <div class="stat-number">8</div>
+                        </div>
+                    </div>
+
+                    <div class="histogram" style="margin-bottom:20px;">
+                        <div class="histogram-row">
+                            <span class="histogram-label">0-200</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:45%"></div></div>
+                            <span class="histogram-value">45</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">200-400</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:30%"></div></div>
+                            <span class="histogram-value">30</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">400-600</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:15%"></div></div>
+                            <span class="histogram-value">15</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">600+</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:10%"></div></div>
+                            <span class="histogram-value">10</span>
+                        </div>
+                    </div>
+
+                    <!-- 高热稿件筛选规则 -->
+                    <div style="background:#f9fbfe; padding:16px; border-radius:20px; margin-bottom:20px;">
+                        <h4 style="margin-bottom:8px;">高热稿件筛选规则</h4>
+                        <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <select class="filter-select" style="width:110px;">
+                                    <option>排名前N</option>
+                                    <option>评论数≥N</option>
+                                </select>
+                                <input class="weight-input" value="20" style="width:80px;" placeholder="N" type="number">
+                            </div>
+                            <button class="btn-secondary">重新计算</button>
+                        </div>
+                    </div>
+
+                    <!-- 稿件列表筛选栏 -->
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                        <div class="search-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="标题搜索" class="search-input">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <span class="filter-label">热度:</span>
+                            <select class="filter-select" style="width:100px;">
+                                <option>全部</option>
+                                <option>高热</option>
+                                <option>非高热</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <span class="filter-label">相关性复核:</span>
+                            <select class="filter-select" style="width:120px;">
+                                <option>全部</option>
+                                <option>待复核</option>
+                                <option>相关</option>
+                                <option>非相关</option>
+                            </select>
+                        </div>
+                        <button class="btn-secondary" onclick="openBatchModal()"><i class="fas fa-check-double"></i> 批量复核</button>
+                    </div>
+
+                    <!-- 稿件列表 -->
+                    <div class="card"><div class="card-body" style="padding:0;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="selectAllPost"></th>
+                                    <th>稿件ID</th>
+                                    <th>排名</th>
+                                    <th>排序</th>
+                                    <th>标题</th>
+                                    <th>原文</th>
+                                    <th>链接</th>
+                                    <th>评论数</th>
+                                    <th>播放量</th>
+                                    <th>点赞数</th>
+                                    <th>热度</th>
+                                    <th>相关性复核</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" class="post-checkbox"></td>
+                                    <td>3001</td>
+                                    <td>1</td>
+                                    <td>1</td>
+                                    <td>福星版本评测</td>
+                                    <td><span class="link-icon" onclick="alert('原文：福星版本评测...')">点击查看</span></td>
+                                    <td><a href="#" onclick="window.open('#');return false;">链接</a></td>
+                                    <td>856</td>
+                                    <td>123,000</td>
+                                    <td>21,000</td>
+                                    <td><span class="badge badge-success">高热</span></td>
+                                    <td><span class="badge badge-success">相关</span></td>
+                                    <td>
+                                        <button class="btn-text" onclick="updateRelevance('相关')">相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('非相关')">非相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('重置')">重置</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="post-checkbox"></td>
+                                    <td>3002</td>
+                                    <td>2</td>
+                                    <td>2</td>
+                                    <td>最强阵容推荐</td>
+                                    <td><span class="link-icon" onclick="alert('原文：最强阵容推荐...')">点击查看</span></td>
+                                    <td><a href="#" onclick="window.open('#');return false;">链接</a></td>
+                                    <td>342</td>
+                                    <td>52,000</td>
+                                    <td>18,000</td>
+                                    <td><span class="badge badge-neutral">非高热</span></td>
+                                    <td><span class="badge badge-warning">待复核</span></td>
+                                    <td>
+                                        <button class="btn-text" onclick="updateRelevance('相关')">相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('非相关')">非相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('重置')">重置</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="post-checkbox"></td>
+                                    <td>3003</td>
+                                    <td>3</td>
+                                    <td>3</td>
+                                    <td>普通游戏视频</td>
+                                    <td><span class="link-icon" onclick="alert('原文：普通游戏视频...')">点击查看</span></td>
+                                    <td><a href="#" onclick="window.open('#');return false;">链接</a></td>
+                                    <td>187</td>
+                                    <td>21,000</td>
+                                    <td>9,000</td>
+                                    <td><span class="badge badge-neutral">非高热</span></td>
+                                    <td><span class="badge badge-neutral">非相关</span></td>
+                                    <td>
+                                        <button class="btn-text" onclick="updateRelevance('相关')">相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('非相关')">非相关</button>
+                                        <button class="btn-text" onclick="updateRelevance('重置')">重置</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 评论列表 -->
+        <div id="tab-comment" class="tab-content">
+            <div id="commentEmpty" class="empty-state" style="display:none;">暂无数据，请先完成数据采集</div>
+            <div id="commentContent" style="display:none;">
+                <div class="inner-tabs" id="commentPlatformTabs">
+                    <span class="inner-tab active" data-comment-platform="bilibili">B站</span>
+                    <span class="inner-tab" data-comment-platform="douyin">抖音</span>
+                </div>
+                
+                <div class="comment-platform-content active" data-comment="bilibili">
+                    <div class="stat-cards">
+                        <div class="stat-card"><div class="stat-label">高热稿件总数</div><div class="stat-number">23</div></div>
+                        <div class="stat-card"><div class="stat-label">评论总数</div><div class="stat-number">2,345</div></div>
+                        <div class="stat-card"><div class="stat-label">高热评论总数</div><div class="stat-number">87</div></div>
+                        <div class="stat-card"><div class="stat-label">待复核</div><div class="stat-number">12</div></div>
+                    </div>
+
+                    <h4 style="margin:20px 0 10px;">一级评论热度分布（楼中楼数）</h4>
+                    <div class="histogram" style="margin-bottom:20px;">
+                        <div class="histogram-row">
+                            <span class="histogram-label">0-5</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:50%"></div></div>
+                            <span class="histogram-value">50</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">6-10</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:30%"></div></div>
+                            <span class="histogram-value">30</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">11-20</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:15%"></div></div>
+                            <span class="histogram-value">15</span>
+                        </div>
+                        <div class="histogram-row">
+                            <span class="histogram-label">20+</span>
+                            <div class="histogram-bar"><div class="histogram-fill" style="width:5%"></div></div>
+                            <span class="histogram-value">5</span>
+                        </div>
+                    </div>
+
+                    <!-- 高热评论筛选规则 -->
+                    <div style="background:#f9fbfe; padding:16px; border-radius:20px; margin-bottom:20px;">
+                        <h4 style="margin-bottom:8px;">高热评论筛选规则</h4>
+                        <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <select class="filter-select" style="width:120px;">
+                                    <option>排名前N</option>
+                                    <option>楼中楼数≥N</option>
+                                </select>
+                                <input class="weight-input" value="10" style="width:80px;" placeholder="N" type="number">
+                            </div>
+                            <button class="btn-secondary">重新计算</button>
+                        </div>
+                    </div>
+
+                    <div class="sub-tabs" id="commentLevelTabs">
+                        <span class="sub-tab active" data-level="primary">一级评论</span>
+                        <span class="sub-tab" data-level="secondary">二级评论</span>
+                    </div>
+
+                    <!-- 一级评论列表 -->
+                    <div class="comment-level-content active" data-level="primary">
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                            <div class="search-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" placeholder="评论正文搜索" class="search-input">
+                            </div>
+                            <div class="search-wrapper" style="flex:0 0 150px;">
+                                <i class="fas fa-id-card"></i>
+                                <input type="text" placeholder="评论ID" class="search-input">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span class="filter-label">评论类型:</span>
+                                <select class="filter-select">
+                                    <option>全部</option>
+                                    <option>一级</option>
+                                    <option>二级</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span class="filter-label">热度:</span>
+                                <select class="filter-select">
+                                    <option>全部</option>
+                                    <option>高热</option>
+                                    <option>非高热</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span class="filter-label">相关性:</span>
+                                <select class="filter-select">
+                                    <option>全部</option>
+                                    <option>相关</option>
+                                    <option>非相关</option>
+                                    <option>待复核</option>
+                                </select>
+                            </div>
+                            <button class="btn-secondary" onclick="openBatchModal()"><i class="fas fa-check-double"></i> 批量复核</button>
+                        </div>
+
+                        <!-- 分组1：稿件ID 3001 -->
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <i class="fas fa-chevron-down"></i> 稿件ID: 3001 (福星版本评测)
+                        </div>
+                        <div class="group-content">
+                            <div class="card"><div class="card-body" style="padding:0;">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>评论ID</th>
+                                            <th>排名</th>
+                                            <th>排序</th>
+                                            <th>稿件ID</th>
+                                            <th>稿件标题</th>
+                                            <th>稿件链接</th>
+                                            <th>评论正文</th>
+                                            <th>评论类型</th>
+                                            <th>楼中楼数</th>
+                                            <th>点赞数</th>
+                                            <th>热度</th>
+                                            <th>相关性复核</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>4001</td>
+                                            <td>1</td>
+                                            <td>1</td>
+                                            <td>3001</td>
+                                            <td>福星版本评测</td>
+                                            <td><a href="#">链接</a></td>
+                                            <td>这个版本真好玩！</td>
+                                            <td>一级</td>
+                                            <td>15</td>
+                                            <td>67</td>
+                                            <td><span class="badge badge-success">高热</span></td>
+                                            <td><span class="badge badge-success">相关</span></td>
+                                            <td>
+                                                <button class="btn-text">相关</button>
+                                                <button class="btn-text">非相关</button>
+                                                <button class="btn-text">重置</button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>4002</td>
+                                            <td>2</td>
+                                            <td>2</td>
+                                            <td>3001</td>
+                                            <td>福星版本评测</td>
+                                            <td><a href="#">链接</a></td>
+                                            <td>确实不错</td>
+                                            <td>一级</td>
+                                            <td>8</td>
+                                            <td>23</td>
+                                            <td><span class="badge badge-neutral">非高热</span></td>
+                                            <td><span class="badge badge-warning">待复核</span></td>
+                                            <td>
+                                                <button class="btn-text">相关</button>
+                                                <button class="btn-text">非相关</button>
+                                                <button class="btn-text">重置</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div></div>
+                        </div>
+
+                        <!-- 分组2：稿件ID 3002 -->
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <i class="fas fa-chevron-down"></i> 稿件ID: 3002 (最强阵容推荐)
+                        </div>
+                        <div class="group-content">
+                            <div class="card"><div class="card-body" style="padding:0;">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>评论ID</th>
+                                            <th>排名</th>
+                                            <th>排序</th>
+                                            <th>稿件ID</th>
+                                            <th>稿件标题</th>
+                                            <th>稿件链接</th>
+                                            <th>评论正文</th>
+                                            <th>评论类型</th>
+                                            <th>楼中楼数</th>
+                                            <th>点赞数</th>
+                                            <th>热度</th>
+                                            <th>相关性复核</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>4003</td>
+                                            <td>1</td>
+                                            <td>1</td>
+                                            <td>3002</td>
+                                            <td>最强阵容推荐</td>
+                                            <td><a href="#">链接</a></td>
+                                            <td>学习了</td>
+                                            <td>一级</td>
+                                            <td>3</td>
+                                            <td>8</td>
+                                            <td><span class="badge badge-neutral">非高热</span></td>
+                                            <td><span class="badge badge-neutral">非相关</span></td>
+                                            <td>
+                                                <button class="btn-text">相关</button>
+                                                <button class="btn-text">非相关</button>
+                                                <button class="btn-text">重置</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div></div>
+                        </div>
+                    </div>
+
+                    <!-- 二级评论列表 -->
+                    <div class="comment-level-content" data-level="secondary">
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                            <div class="search-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" placeholder="评论正文搜索" class="search-input">
+                            </div>
+                            <div class="search-wrapper" style="flex:0 0 150px;">
+                                <i class="fas fa-id-card"></i>
+                                <input type="text" placeholder="评论ID" class="search-input">
+                            </div>
+                            <div><select class="filter-select"><option>全部热度</option></select></div>
+                            <div><select class="filter-select"><option>全部相关性</option></select></div>
+                            <button class="btn-secondary" onclick="openBatchModal()"><i class="fas fa-check-double"></i> 批量复核</button>
+                        </div>
+
+                        <!-- 分组：一级评论ID 4001 -->
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <i class="fas fa-chevron-down"></i> 一级评论ID: 4001 (这个版本真好玩！)
+                        </div>
+                        <div class="group-content">
+                            <div class="card"><div class="card-body" style="padding:0;">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>评论ID</th>
+                                            <th>排名</th>
+                                            <th>排序</th>
+                                            <th>稿件ID</th>
+                                            <th>稿件标题</th>
+                                            <th>稿件链接</th>
+                                            <th>评论正文</th>
+                                            <th>评论类型</th>
+                                            <th>一级评论ID</th>
+                                            <th>点赞数</th>
+                                            <th>热度</th>
+                                            <th>相关性复核</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>5001</td>
+                                            <td>1</td>
+                                            <td>1</td>
+                                            <td>3001</td>
+                                            <td>福星版本评测</td>
+                                            <td><a href="#">链接</a></td>
+                                            <td>（这个版本真好玩！）+ 我觉得也是</td>
+                                            <td>二级</td>
+                                            <td>4001</td>
+                                            <td>5</td>
+                                            <td><span class="badge badge-success">高热</span></td>
+                                            <td><span class="badge badge-success">相关</span></td>
+                                            <td>
+                                                <button class="btn-text">相关</button>
+                                                <button class="btn-text">非相关</button>
+                                                <button class="btn-text">重置</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 高热评论列表 -->
+        <div id="tab-hotcomment" class="tab-content">
+            <div id="hotCommentEmpty" class="empty-state" style="display:none;">暂无数据，请先完成数据采集</div>
+            <div id="hotCommentContent" style="display:none;">
+                <div class="inner-tabs" id="hotCommentPlatformTabs">
+                    <span class="inner-tab active" data-hotcomment="bilibili">B站</span>
+                    <span class="inner-tab" data-hotcomment="douyin">抖音</span>
+                </div>
+                
+                <div class="hotcomment-platform-content active" data-hotcomment="bilibili">
+                    <div class="stat-cards">
+                        <div class="stat-card"><div class="stat-label">高热稿件总数</div><div class="stat-number">23</div></div>
+                        <div class="stat-card"><div class="stat-label">高热评论总数</div><div class="stat-number">87</div></div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                        <div class="search-wrapper" style="flex:1;">
+                            <i class="fas fa-id-card"></i>
+                            <input type="text" placeholder="评论ID" class="search-input">
+                        </div>
+                        <div class="search-wrapper" style="flex:2;">
+                            <i class="fas fa-heading"></i>
+                            <input type="text" placeholder="标题搜索" class="search-input">
+                        </div>
+                        <div><select class="filter-select"><option>全部评论类型</option></select></div>
+                        <div><select class="filter-select"><option>全部热度</option></select></div>
+                        <div><select class="filter-select"><option>全部相关性</option></select></div>
+                        <button class="btn-secondary"><i class="fas fa-file-excel"></i> 导出当前筛选列表为Excel</button>
+                    </div>
+
+                    <div class="card"><div class="card-body" style="padding:0;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>评论ID</th>
+                                    <th>排名</th>
+                                    <th>排序</th>
+                                    <th>稿件ID</th>
+                                    <th>稿件标题</th>
+                                    <th>稿件链接</th>
+                                    <th>评论正文</th>
+                                    <th>评论类型</th>
+                                    <th>楼中楼数/一级ID</th>
+                                    <th>点赞数</th>
+                                    <th>热度</th>
+                                    <th>相关性复核</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>4001</td>
+                                    <td>1</td>
+                                    <td>1</td>
+                                    <td>3001</td>
+                                    <td>福星版本评测</td>
+                                    <td><a href="#">链接</a></td>
+                                    <td>这个版本真好玩！</td>
+                                    <td>一级</td>
+                                    <td>15</td>
+                                    <td>67</td>
+                                    <td><span class="badge badge-success">高热</span></td>
+                                    <td><span class="badge badge-success">相关</span></td>
+                                    <td>
+                                        <button class="btn-text">相关</button>
+                                        <button class="btn-text">非相关</button>
+                                        <button class="btn-text">重置</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>5001</td>
+                                    <td>2</td>
+                                    <td>1</td>
+                                    <td>3001</td>
+                                    <td>福星版本评测</td>
+                                    <td><a href="#">链接</a></td>
+                                    <td>（这个版本真好玩！）+ 我觉得也是</td>
+                                    <td>二级</td>
+                                    <td>4001</td>
+                                    <td>5</td>
+                                    <td><span class="badge badge-success">高热</span></td>
+                                    <td><span class="badge badge-success">相关</span></td>
+                                    <td>
+                                        <button class="btn-text">相关</button>
+                                        <button class="btn-text">非相关</button>
+                                        <button class="btn-text">重置</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 状态管理
+    let currentProjectStatus = '已完成';
+    let projectName = '金铲铲·福星版本';
+
+    function showList() { 
+        document.getElementById('page-list').classList.add('active'); 
+        document.getElementById('page-detail').classList.remove('active'); 
+    }
+
+    function showDetail(name, status) {
+        projectName = name; 
+        currentProjectStatus = status;
+        document.getElementById('detailProjectName').innerText = name;
+        document.getElementById('detailProjectStatus').innerText = status;
+        document.getElementById('detailProjectStatus').className = 'badge ' + 
+            (status==='已完成'?'badge-success':status==='执行中'?'badge-warning':'badge-neutral');
+        document.getElementById('page-list').classList.remove('active');
+        document.getElementById('page-detail').classList.add('active');
+        
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelector('.tab[data-tab="config"]').classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.getElementById('tab-config').classList.add('active');
+        updateUIByStatus();
+    }
+
+    function updateUIByStatus() {
+        const isExecuted = currentProjectStatus !== '未执行';
+        const executeBtn = document.getElementById('executeBtn');
+        const executeBtnText = document.getElementById('executeBtnText');
+        const platformEmpty = document.getElementById('platformEmpty');
+        const platformContent = document.getElementById('platformContent');
+        const postEmpty = document.getElementById('postEmpty');
+        const postContent = document.getElementById('postContent');
+        const commentEmpty = document.getElementById('commentEmpty');
+        const commentContent = document.getElementById('commentContent');
+        const hotCommentEmpty = document.getElementById('hotCommentEmpty');
+        const hotCommentContent = document.getElementById('hotCommentContent');
+        
+        if (currentProjectStatus === '未执行') {
+            executeBtn.disabled = false; 
+            executeBtnText.innerText = '开始采集';
+            platformEmpty.style.display = 'block'; 
+            platformContent.style.display = 'none';
+            postEmpty.style.display = 'block'; 
+            postContent.style.display = 'none';
+            commentEmpty.style.display = 'block'; 
+            commentContent.style.display = 'none';
+            hotCommentEmpty.style.display = 'block'; 
+            hotCommentContent.style.display = 'none';
+        } else if (currentProjectStatus === '执行中') {
+            executeBtn.disabled = true; 
+            executeBtnText.innerText = '执行中';
+            platformEmpty.style.display = 'none'; 
+            platformContent.style.display = 'block';
+            postEmpty.style.display = 'none'; 
+            postContent.style.display = 'block';
+            commentEmpty.style.display = 'none'; 
+            commentContent.style.display = 'block';
+            hotCommentEmpty.style.display = 'none'; 
+            hotCommentContent.style.display = 'block';
+        } else {
+            executeBtn.disabled = true; 
+            executeBtnText.innerText = '已采集';
+            platformEmpty.style.display = 'none'; 
+            platformContent.style.display = 'block';
+            postEmpty.style.display = 'none'; 
+            postContent.style.display = 'block';
+            commentEmpty.style.display = 'none'; 
+            commentContent.style.display = 'block';
+            hotCommentEmpty.style.display = 'none'; 
+            hotCommentContent.style.display = 'block';
+        }
+    }
+
+    function confirmExecute() {
+        if (currentProjectStatus !== '未执行') return;
+        if (confirm('抓取配置在项目首次执行后不可修改，以保证数据稳定。确定执行吗？')) {
+            alert('开始执行采集（模拟）');
+            currentProjectStatus = '执行中';
+            document.getElementById('detailProjectStatus').innerText = '执行中';
+            document.getElementById('detailProjectStatus').className = 'badge badge-warning';
+            updateUIByStatus();
+            setTimeout(() => {
+                currentProjectStatus = '已完成';
+                document.getElementById('detailProjectStatus').innerText = '已完成';
+                document.getElementById('detailProjectStatus').className = 'badge badge-success';
+                updateUIByStatus();
+                alert('采集完成');
+            }, 2000);
+        }
+    }
+
+    document.getElementById('newProjectBtn').addEventListener('click', ()=>{ 
+        showDetail('新建项目', '未执行'); 
+    });
+
+    // 详情页tab切换
+    document.querySelectorAll('#detailTabs .tab').forEach(tab=>{
+        tab.addEventListener('click', ()=>{
+            document.querySelectorAll('#detailTabs .tab').forEach(t=>t.classList.remove('active'));
+            tab.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+            document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        });
+    });
+
+    // 平台标签点击选中
+    document.querySelectorAll('.platform-tag').forEach(tag=>{
+        tag.addEventListener('click', ()=>tag.classList.toggle('selected'));
+    });
+
+    // 稿件内平台切换
+    document.querySelectorAll('[data-post-platform]').forEach(p=>{
+        p.addEventListener('click', function(){
+            document.querySelectorAll('[data-post-platform]').forEach(x=>x.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.post-platform-content').forEach(c=>c.classList.remove('active'));
+            document.querySelector(`.post-platform-content[data-post="${this.dataset.postPlatform}"]`).classList.add('active');
+        });
+    });
+
+    // 平台热度内tab切换
+    document.querySelectorAll('[data-platform-detail]').forEach(p=>{
+        p.addEventListener('click', function(){
+            document.querySelectorAll('[data-platform-detail]').forEach(x=>x.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // 评论列表内平台切换
+    document.querySelectorAll('[data-comment-platform]').forEach(p=>{
+        p.addEventListener('click', function(){
+            document.querySelectorAll('[data-comment-platform]').forEach(x=>x.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.comment-platform-content').forEach(c=>c.classList.remove('active'));
+            document.querySelector(`.comment-platform-content[data-comment="${this.dataset.commentPlatform}"]`).classList.add('active');
+        });
+    });
+
+    // 评论级别切换
+    document.querySelectorAll('[data-level]').forEach(l=>{
+        l.addEventListener('click', function(){
+            document.querySelectorAll('[data-level]').forEach(x=>x.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.comment-level-content').forEach(c=>c.classList.remove('active'));
+            document.querySelector(`.comment-level-content[data-level="${this.dataset.level}"]`).classList.add('active');
+        });
+    });
+
+    // 高热评论列表内平台切换
+    document.querySelectorAll('[data-hotcomment]').forEach(p=>{
+        p.addEventListener('click', function(){
+            document.querySelectorAll('[data-hotcomment]').forEach(x=>x.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.hotcomment-platform-content').forEach(c=>c.classList.remove('active'));
+            document.querySelector(`.hotcomment-platform-content[data-hotcomment="${this.dataset.hotcomment}"]`).classList.add('active');
+        });
+    });
+
+    // 分组折叠功能
+    function toggleGroup(header) {
+        const content = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+    }
+
+    // 全选
+    document.getElementById('selectAllPost')?.addEventListener('change', (e)=>{
+        document.querySelectorAll('.post-checkbox').forEach(cb=>cb.checked=e.target.checked);
+    });
+
+    // 批量复核模态
+    const batchModal = document.getElementById('batchModal');
+    function openBatchModal() {
+        if(document.querySelectorAll('.post-checkbox:checked').length===0) { 
+            alert('请先选择稿件'); 
+            return; 
+        }
+        batchModal.style.display = 'flex';
+    }
+    function closeBatchModal() { 
+        batchModal.style.display = 'none'; 
+    }
+    function batchAction(action) { 
+        window.selectedBatchAction = action; 
+        alert(`已选择：${action}`); 
+    }
+    function confirmBatch() { 
+        closeBatchModal(); 
+        alert('批量操作已执行（模拟）'); 
+    }
+    function updateRelevance(val) { 
+        alert(`将相关性复核设为：${val}`); 
+    }
+    function filterPostList(type) {
+        if(type==='total') alert('显示所有稿件');
+        else if(type==='high') alert('筛选高热稿件');
+        else if(type==='pending') alert('筛选待复核稿件');
+    }
+
+    window.switchToPostTab = (platform) => {
+        document.querySelectorAll('#detailTabs .tab').forEach(t=>t.classList.remove('active'));
+        document.querySelector('.tab[data-tab="post"]').classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.getElementById('tab-post').classList.add('active');
+        
+        document.querySelectorAll('[data-post-platform]').forEach(t=>t.classList.remove('active'));
+        let target = platform==='B站'?'bilibili':platform==='抖音'?'douyin':'xiaohongshu';
+        document.querySelector(`[data-post-platform="${target}"]`).classList.add('active');
+        document.querySelectorAll('.post-platform-content').forEach(c=>c.classList.remove('active'));
+        document.querySelector(`.post-platform-content[data-post="${target}"]`).classList.add('active');
+    };
+</script>
+</body>
+</html>
